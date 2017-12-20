@@ -1,0 +1,22 @@
+---
+title: "New Branch"
+author: "Becca"
+date: "20 december 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Testing out adding a branch to my github.
+```{r}
+data<-(1:10)
+
+
+```
+This has been a test. 
+
+I think I just added this to my master branch. 
+
+Okay now I've made another update! Let's see if it gets saved to my GitHub. 
