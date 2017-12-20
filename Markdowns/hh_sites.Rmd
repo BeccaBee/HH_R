@@ -1,0 +1,101 @@
+---
+title: "Import_GPX"
+author: "Becca"
+date: "7 september 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load packages:
+```{r }
+library(plotKML)
+library(XML)
+library(OpenStreetMap)
+library(lubridate)
+library(dplyr)
+```
+
+Read in the GPX file - don't need to do this step any more. 
+```{r }
+#Read in the datafile
+hh_0109 <- readGPX("C:/Users/rbs335/Desktop/Waypoints_HH_Soil/Waypoints_01-Sep-17.gpx", metadata = TRUE, waypoints = TRUE, tracks = TRUE, routes = TRUE)
+hh_0109$waypoints
+
+hh_0409 <- readGPX("C:/Users/rbs335/Desktop/Waypoints_HH_Soil/Waypoints_04-Sep-17.gpx", metadata = TRUE, waypoints = TRUE, tracks = TRUE, routes = TRUE)
+
+hh_0509 <- readGPX("C:/Users/rbs335/Desktop/Waypoints_HH_Soil/Waypoints_05-Sep-17.gpx", metadata = TRUE, waypoints = TRUE, tracks = TRUE, routes = TRUE)
+
+hh_0609 <- readGPX("C:/Users/rbs335/Desktop/Waypoints_HH_Soil/Waypoints_06-Sep-17.gpx", metadata = TRUE, waypoints = TRUE, tracks = TRUE, routes = TRUE)
+
+#Bind dataframes
+library(dplyr)
+hh_all<-rbind(hh_0109$waypoints, hh_0409$waypoints, hh_0509$waypoints, hh_0609$waypoints)
+View(hh_all)
+
+##Save the dataframe to my HH_info folder
+write.csv(hh_all, file = "C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/Site_info/hh_all.csv")
+```
+
+Read in the edited dataframe:
+```{ r }
+#read in datafile
+hh_sites<-read.csv2("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/Site_info/hh_edit.csv", header=TRUE)
+View(hh_sites)
+
+#make the lat and long numeric
+#Update: This isn't working. Just import the file manually changing these columns to numeric.
+
+options(digits=9)
+hh_sites$lon = as.numeric(hh_sites$lon)
+hh_sites$lat = as.numeric(hh_sites$lat)
+View(hh_sites)
+```
+
+Plot the sampling points, use the dataframe "hh_edit":
+```{r }
+library(ggplot2)
+library(ggmap)
+
+#write.csv(hh_edit, file = "C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/hh_edit.csv")
+
+hh_edit<-read.csv("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/hh_edit.csv", header=TRUE)
+#View(hh_edit)
+
+#hhout<-get_map(location = "Hollandse Hout", zoom=10)
+#str(hhout)
+
+#ggmap(hhout, extent = "normal")
+#ggmap(hhout, zoom = 10)
+#qmap("Hollandse Hout", zoom = 13)
+library(grDevices)
+coord<-hh_edit[c(2,3)]
+#View(coord)
+coord<-as.matrix(coord)
+
+chulls<-ddply(hh_edit, .(species), function(hh_edit) hh_edit[chull(hh_edit$lon, hh_edit$lat), ])
+
+#plot the sampling points on the map
+hhmap<- qmap("Hollandse Hout", zoom=14, maptype = "satellite")
+hhmap + 
+  geom_point(aes(x=lon, y=lat, color = species), data=hh_edit) +
+  geom_polygon(data=chulls, aes(x=lon, y=lat, fill=species), alpha=0.3) +
+  scale_color_brewer(palette='Set1') +
+  scale_fill_brewer(palette='Set1')
+```
+
+Convex hulls
+```{r }
+library(vegan)
+library(tidyverse)
+library(plyr)
+
+ggplot(hh_edit, aes(x=lon, y=lat, color=species)) + geom_point()
+
+ggplot(data=hh_edit, aes(x=lon, y=lat, color=species)) + geom_point() +
+  geom_polygon(data=chulls, aes(x=lon, y=lat, fill=species), alpha=0.3) +
+  scale_color_brewer(palette='Set1') +
+  scale_fill_brewer(palette='Set1')
+```

@@ -1,0 +1,104 @@
+---
+
+title: "Pilot"
+author: "Becca"
+date: "16 augustus 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r }
+library(ggplot2)
+library(tidyverse)
+
+pilot_data <- read_delim("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/pilot_data.csv", delim=";")
+
+View(pilot_data)
+
+pilot_data$m <- 100*(pilot_data$pct_m)
+pilot_data$m
+```
+
+View the shape of the data:
+```{r boxplots}
+p1<-ggplot(pilot_data, aes(species, bulkdens)) +
+  geom_boxplot()+
+  geom_point()
+p1
+
+p2<-ggplot(pilot_data, aes(depth, bulkdens))+
+  geom_boxplot() +
+  geom_point()
+p2
+
+p3<-ggplot(pilot_data, aes(depth, pH)) +
+  geom_boxplot () +
+  geom_point ()
+p3
+
+p4<-ggplot(pilot_data, aes(species, pH)) + 
+  geom_boxplot()+
+  geom_point() 
+p4
+
+p5<-ggplot(pilot_data, aes(sampleid, m)) + 
+  geom_boxplot()+
+  geom_point()
+p5
+
+p6<-ggplot(pilot_data, aes(depth, m)) +
+  geom_boxplot () +
+  geom_point ()
+p6
+
+p7<-ggplot(pilot_data, aes(m, bulkdens)) +
+  geom_smooth(method='lm') +
+  geom_point ()
+p7
+
+p7<-ggplot(pilot_data, aes(bulkdens, m)) +
+  geom_smooth(method='lm') +
+  geom_point ()
+p7
+
+p8<-ggplot(pilot_data, aes(species, kstar)) +
+  ylim(0.5, 2.25) +
+  geom_point()
+p8
+```
+
+test relationships among variables:
+```{r }
+library(nlme)
+library(lme4)
+m1<-lmer(pH ~ m + (1|depth) + (1|sampleid), data=pilot_data)
+m1
+
+m1.1<-lmer(pH ~ species + (1|depth), data=pilot_data)
+summary(m1.1)
+
+m2<-aov(m ~ depth, data=pilot_data)
+summary(m2)
+
+m3<-lmer(bulkdens ~ m + (1|sampleid), data=pilot_data)
+summary(m3)
+library(lsmeans)
+m3.agg<-anova(m3)
+m3.agg
+
+m4<-aov(bulkdens ~ species + depth, data=pilot_data)
+summary(m4)
+
+m5<-lm(pH ~ sampleid + depth, data=pilot_data)
+summary(m5)
+aov5<-aov(m5)
+t5<-TukeyHSD(aov5)
+t5
+
+m6<-aov(pH ~ species + depth, data=pilot_data)
+summary(m6)
+TukeyHSD(m6)
+```

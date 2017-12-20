@@ -1,0 +1,301 @@
+
+title: "Mock_Results"
+author: "Becca"
+date: "7 augustus 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in the mock field and mesocosm dataframes; load libraries.
+```{r echo=FALSE}
+library(tidyverse)
+library(picante)
+library(ggplot2)
+setwd(getwd())
+
+field<-read.csv2("~/Research/Data/Field_mockdata2.csv", header=TRUE)
+library(readr)
+meso <- read_csv("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/meso.csv")
+
+meso$Sample_ID = as.factor(meso$Sample_ID)
+meso$litter=as.factor(meso$litter)
+meso$micro=as.factor(meso$micro)
+meso$sterile=as.factor(meso$sterile)
+meso$root=as.factor(meso$root)
+meso$Time=as.factor(meso$Time)
+meso$Rep=as.factor(meso$Rep)
+View(meso)
+```
+
+
+Field data. Test for:
+1)significant variation among species (litter traits, soil traits)
+2)significant variation in soil carbon partitioning by depth and soil fraction
+```{r echo=FALSE}
+m1<-aov(CN_soil~Species, data=field)
+summary(m1)
+
+m1plot<-ggplot(field, aes(Species, CN_soil)) +
+  geom_boxplot()+
+  geom_point()
+m1plot
+
+m2<-aov(CN_litter~Species, data=field)
+summary(m2)
+
+m2plot<-ggplot(field, aes(Species, CN_litter)) +
+  geom_boxplot() +
+  geom_point()
+m2plot
+
+pm1m2<-ggplot(field, aes(CN_litter, CN_soil)) +
+  geom_point() +
+  facet_wrap(~Species) +
+  geom_smooth(method="lm")
+pm1m2
+
+###Manova for AOV for the 4 proportions of soil by depth###
+y<-cbind(field$PctDOC, field$Pct_MAOM, field$pct_POM, field$PCT_SAOM)
+
+fit1<-manova(y~field$Depth)
+summary(fit, test="Pillai")
+
+fit2<-manova(y~Depth + Species, data=field)
+summary(fit2)
+
+##PERMANOVA
+mod1<-adonis(y~Depth + Species, data=field, by=NULL)
+mod1
+
+mod2<-metaMDS(y)
+mod2
+plot(mod2)
+```
+
+Linear mixed-effect model:
+```{r }
+library(lme4)
+library(nlme)
+library(lsmeans)
+maomfit<-lmer(Pct_MAOM ~ Species + (1|Depth), data=field)
+maomfit
+maomfit.aov<-anova(maomfit)
+summary(maomfit.aov)
+#lsmeans(maomfit.aov)
+
+boxplot(field$Pct_MAOM~field$Depth)
+```
+
+Multivariate Analysis
+```{r echo=FALSE}
+library(MASS)
+
+soil.lda <- lda(field$Pct_MAOM ~ field$Species + field$Depth + field$pH_Soil + field$pH_litter + field$TOC.g.kg. + field$TON.g.kg.)
+soil.lda
+
+```
+
+Mesocosms - soil aggregation over time:
+```{r }
+meso$Time=as.factor(meso$Time)
+library(nlme)
+library(lme4)
+library(pander)
+agg<-lmer(pct_agg~Time + (1|litter), data=meso)
+agg
+
+###compare group means from linear hypothesis tests (ie, time 1 vs time 2, time 3 vs time 2)###
+library(multcomp)
+summary(glht(agg, linfct = mcp(Time = "Tukey")), test = adjusted("holm"))
+
+###Significant differences among each time group, suggesting that aggregation increases from time point 1 to 2 and from 2 to 3. let's graph it:
+
+agg.plot<-ggplot(agg, aes(x=Time, y=pct_agg)) +
+          geom_point() +
+          geom_boxplot()+
+         xlab("Sampling period") +
+         ylab("Percent aggregation by dry weight") 
+agg.plot
+```
+
+
+
+Mesocosms - soil aggregation by species
+```{r echo=FALSE}
+
+agg2<-lmer(pct_agg~litter + Time + (1|root), data=meso)
+summary(agg2)
+plot(agg2)
+###compare group means from linear hypothesis tests (ie, time 1 vs time 2, time 3 vs time 2)###
+
+summary(glht(agg2, linfct = mcp(litter = "Tukey")), test = adjusted("holm"))
+
+###Species a and b are significantly different, as are species a and c, but species b and c are not significantly different in their production of aggregation. 
+meso.sub<-subset(meso, litter= "o")
+                  
+                  
+agg2.plot<-ggplot(agg2, aes(x=litter, y=pct_agg)) +
+          geom_point() +
+          geom_boxplot() +
+          facet_wrap(sterile~Time)
+agg2.plot
+
+```
+  
+  Microbial community growth efficiency by time and by speicies:
+```{r echo=FALSE}
+mic<-aov(mic_ge~litter + Time, data=meso)
+summary(mic)
+#significant variation among groups by species and time
+
+#plot the boxplots
+mic.time<-ggplot(mic, aes(x=Time, y=mic_ge)) +
+    geom_boxplot() 
+
+mic.time
+
+mic.sp<-ggplot(mic, aes(x=litter, y=mic_ge)) +
+  geom_boxplot() 
+ # facet_wrap(~root)
+mic.sp
+
+#test the specific effects of time and species
+mic.lmer<-lmer(mic_ge~litter + Time + (1|Rep), data=meso)
+mic.lmer
+#residuals look good. 
+plot(mic.lmer)
+#post-hoc tests
+summary(glht(mic.lmer, linfct = mcp(litter = "Tukey")), test = adjusted("holm"))
+summary(glht(mic.lmer, linfct = mcp(Time = "Tukey")), test = adjusted("holm"))
+#Significant differences in microbial growth efficiency both with different species and over time. Now let's test teh relationship between growth efficiency and aggregation.
+```
+
+Aggregation as function of microbial community growth efficiency:
+```{r echo=FALSE}
+#microbial community growth efficiency and aggregation:
+agg.mic<-lmer(pct_agg~mic_ge + (1|litter) + (1|Time), data=meso)
+summary(agg.mic)
+plot(agg.mic)
+#residuals okay, some high points causing variation
+
+#make the plot
+agg.mic.plot<-ggplot(agg.mic, aes(x=mic_ge, y=pct_agg)) +
+                 #can't get this to work, leave out for now: geom_point(color='meso$Species') +
+                geom_point()  +
+                geom_smooth(method = "lm") +
+                xlab("Microbial community growth efficiency") +
+                ylab("Percent aggregation by dry weight") 
+agg.mic.plot
+
+agg.time<-lmer(pct_agg~Time + (1|litter) + (1|mic_ge), data=meso)
+summary(agg.time)
+plot(agg.time)
+#residuals okay, some high points causing variation
+
+#make the plot
+agg.mic.plot<-ggplot(agg.mic, aes(x=mic_ge, y=pct_agg)) +
+                 #can't get this to work, leave out for now: geom_point(color='meso$Species') +
+                geom_point()  +
+                geom_smooth(method = "lm") +
+                xlab("Microbial community growth efficiency") +
+                ylab("Percent aggregation by dry weight") 
+agg.mic.plot
+
+```
+
+Total SOC by treatment
+```{r }
+meso$trt<-paste(meso$litter, meso$micro, meso$root)
+meso.sub<-subset(meso, litter_remain > "0")
+
+me.mod<-lm(TOC ~ trt + Time, data=meso.sub)
+summary(me.mod)
+
+me.mod.aov<-aov(me.mod)
+summary(me.mod.aov)
+
+me.mod2<-lmer(TOC ~litter + (1|root) + (1|micro), data=meso)
+summary(me.mod2)
+
+me.mod3<-lmer(TOC ~ root + (1|litter) + (1|micro), data=meso)
+summary(me.mod3)
+
+me.box<-ggplot(meso.sub, aes(x = litter, y = TOC)) +
+  geom_boxplot() +
+  geom_point() +
+  facet_wrap (micro ~ root)
+me.box
+```
+
+
+Multivariate Analysis:
+```{r }
+my<-cbind(meso$DOC, meso$MAOM, meso$POM, meso$SAOM)
+my.sub<-cbind(meso.sub$DOC, meso.sub$MAOM, meso.sub$POM, meso.sub$SAOM, meso.sub$rMAOM)
+#View(my)
+
+mymod1<-adonis(my.sub ~ litter + micro + Time, data = meso.sub, by=NULL)
+mymod1
+
+mymod2<-adonis(my.sub ~ litter:micro, data=meso.sub, by=NULL)
+mymod2
+```
+
+```{r }
+
+meso.root<-aov(TOC ~ root + litter  + Time, data=meso)
+summary(meso.root)
+
+root.meso<-subset(meso, litter=="o")
+View(root.meso)
+
+root.plot<-ggplot(root.meso, aes(x=root, y=TOC)) +
+  geom_boxplot() +
+  geom_point() +
+  facet_wrap(~Time)
+root.plot  
+
+```
+Treatment combination effects:
+```{r }
+
+tr.maom<-lm(MAOM ~trt + Time, data=meso)
+summary(tr.maom)
+
+tr.saom<-lm(SAOM ~trt + Time, data=meso)
+summary(tr.maom)
+
+root<-ggplot(meso, aes(x=root, y=TOC)) +
+  geom_boxplot()+
+  geom_point()
+root
+
+r.pom<-ggplot(meso, aes(x=root, y=POM)) +
+  geom_boxplot()+
+  geom_point()
+r.pom
+
+r.SAOM<-ggplot(meso, aes(x=root, y=SAOM)) +
+  geom_boxplot()+
+  geom_point()
+r.SAOM
+
+leaf.TOC<-ggplot(meso.sub, aes(x=litter, y=TOC)) +
+  geom_boxplot() +
+  geom_point ()
+leaf.TOC
+
+leaf.SAOM<-ggplot(meso.sub, aes(x=litter, y=SAOM)) +
+  geom_boxplot() +
+  geom_point ()
+leaf.SAOM
+
+```
+
+
+
+
+
