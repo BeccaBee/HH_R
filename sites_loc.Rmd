@@ -1,0 +1,175 @@
+---
+title: "Soil_dat"
+author: "Becca"
+date: "21 december 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Set working directory
+```{r }
+setwd("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data")
+
+```
+
+Import data and libraries:
+```{r}
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(nlme)
+dat<-read.csv2(file="soilchem/bd.c.n.040118.csv", na.rm = FALSE)
+View(dat)
+```
+
+Check data summaries:
+```{r }
+summary(dat)
+#is.numeric(dat$pct.c.bd)
+dat$pct.c.bd<-as.numeric(as.character(dat$pct.c.bd))
+dat$pct.c<-as.numeric(as.character(dat$pct.c))
+
+dat$pct.n.bd<-as.numeric(as.character(dat$pct.n.bd))
+dat$pct.n<-as.numeric(as.character(dat$pct.n))
+
+dat$avg.m<-as.numeric(as.character(dat$avg.m))
+dat$avg.bd<-as.numeric(as.character(dat$avg.bd))
+
+dat$c.n<-as.numeric(as.character(dat$c.n))
+
+summary(dat)
+```
+
+1. Visual comparisons.
+
+Compare C and N contents by species:
+```{r }
+#C contents (corrected for soil bulk density) first:
+cplot<-ggplot(dat, aes(x=taxa, y=pct.c.bd))
+cplot  + geom_point()
+cplot + geom_point(aes(color=factor(depth)))
+
+cplot+
+  geom_point(aes(color=factor(depth))) +
+  labs(title = "Soil % C (corrected for bulk density)",
+  xlab = "Taxa",
+  ylab = "Total C") +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1))
+  
+
+
+#does it look different with the uncorrected C values?
+cplot.uncorrected<-ggplot(dat, aes(x=taxa, y=pct.c))
+
+cplot.uncorrected +
+  geom_point(aes(color=factor(depth))) +
+  labs(title = "Soil % C (uncorrected for bulk density)",
+  xlab = "Taxa",
+  ylab = "Total C") 
+#Values are higher for the upper layer and more condensed in the lower layers. The bulk density correction helps to spread out the values and make it more obvious what the real patterns are. 
+
+
+#N contents (corrected for bulk density):
+nplot<-ggplot(dat, aes(x=taxa, y=pct.n.bd))
+
+nplot +
+  geom_point(aes(color=factor(depth))) +
+  labs(title = "Soil % N (corrected for bulk density)",
+  xlab = "Taxa",
+  ylab = "Total N") +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1))
+
+
+#N contents(not corrected, for comparison):
+nplot.uncorrected<-ggplot(dat, aes(x=taxa, y=pct.n))
+
+nplot.uncorrected +
+  geom_point(aes(color=factor(depth))) +
+  labs(title = "Soil % N (uncorrected for bulk density)",
+  xlab = "Taxa",
+  ylab = "Total N") 
+
+
+#C:N ratio by depth and taxa:
+
+```
+
+Compare bulk density and moisture by depth and species:
+```{r }
+bdplot<-ggplot(dat, aes(x=taxa, y=avg.bd))
+
+bdplot +
+  geom_point(aes(color=factor(depth))) +
+  labs(title = "Soil Bulk Density",
+  xlab = "Taxa",
+  ylab = "Bulk dens") +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1))
+#pattern generally inverts from the C and N plots above. C:N is highest in upper layers, lowest in lower layers. 
+
+#pct moisture by depth and taxa
+mplot<-ggplot(dat, aes(x=taxa, y=avg.m))
+
+mplot +
+  geom_point(aes(color=factor(depth))) +
+  labs(title = "Soil % M by Taxa and Depth",
+  xlab = "Taxa",
+  ylab = "% M") +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1))
+```
+
+2. Statistical comparisons
+
+First, test C:N by taxa and depth:
+```{r }
+#CN ratio by taxa
+library(lmerTest)
+soilcn<- lm(c.n~taxa + factor(depth), dat)
+summary(soilcn)
+
+soilcn.lmer<-lmer(c.n~taxa + (1|depth), dat)
+summary(soilcn.lmer)
+##Fraxinus is the only one with a statistically significant difference in C:N ratio. Lower than all of the others.
+
+#Let's try an interaction term:
+cn.interaction<-lm(c.n~taxa*factor(depth), dat)
+summary(cn.interaction)
+#Fraxinus is still important on its own. 
+##Depth is very important regardless of species. 
+
+#transform cn variable
+dat$ln.cn<-sqrt(dat$c.n)
+#try the interaction term again
+ln.cn.interaction<-lm(ln.cn~taxa*factor(depth), dat)
+summary(ln.cn.interaction)
+#No, transformations don't help. 
+```
+
+Next, test C by taxa and depth:
+```{r }
+soil.c.aov<-aov(pct.c.bd ~ taxa*depth, dat)
+summary(soil.c.aov)
+
+soil.c<-lmer(pct.c.bd ~ taxa + (1|depth), dat)
+summary(soil.c)
+#nothing is important
+
+soil.c.lm<-lm(pct.c.bd ~taxa + factor(depth), dat)
+summary(soil.c.lm)
+#depth is important, nothing else is. 
+```
+
+Finally, test N by taxa and depth:
+```{r }
+soil.n.aov<-aov(pct.n.bd ~taxa*depth, dat)
+summary(soil.n.aov)
+
+soil.n<-lmer(pct.n.bd ~ taxa + (1|depth), dat)
+summary(soil.n)
+
+soil.n.lm<-lm(pct.n.bd ~ taxa + factor(depth), dat)
+summary(soil.n.lm)
+#Nothing is important but depth. 
+```

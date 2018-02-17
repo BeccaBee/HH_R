@@ -1,0 +1,140 @@
+---
+title: "CN_test"
+author: "Becca"
+date: "1 november 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Get packages
+```{r }
+library(ggplot2)
+library(vegan)
+library(lme4)
+library(plyr)
+```
+
+Get data
+```{r }
+setwd("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/soilchem")
+dat<-read.csv("CN_incomp.csv", header=TRUE, sep=";")
+summary(dat)
+dat$dclass<-as.factor(dat$Depthclass)
+summary(dat)
+```
+
+First, make depth an ordered category 
+```{r }
+dat$dclass<-ordered(dat$Depthclass, levels = c("1", "2", "3", "4"))
+```
+
+
+Does tn, tc, or cn_ratio change with species?
+```{r }
+cn.species<-aov(C.N ~ Species, dat)
+summary(cn.species)
+#no change
+
+n_species<-aov(X.N~Species, dat)
+summary(n_species)
+#no change
+
+c_species<-aov(X..C~Species, dat)
+summary(c_species)
+#nope
+```
+Nope.
+
+Does n change with soil depth?
+```{r }
+cn.depth<-aov(C.N ~ dclass, dat)
+summary(cn.depth)
+#yes
+n_depth<-aov(X.N~dclass, dat)
+summary(n_depth)
+#yes
+
+c_depth<-aov(X..C~dclass, dat)
+summary(c_depth)
+#yes
+```
+
+Species + Depth
+```{r }
+cn.lm<-lm(C.N ~ Species + dclass, dat)
+summary(cn.lm)
+#yes
+n_lm<-lm(X.N~dclass + Species, dat)
+summary(n_lm)
+#yes
+
+c_lm<-lm(X..C ~ dclass + Species, dat)
+summary(c_lm)
+z``` 
+
+Species controlling for depth:
+```{r }
+c_lmer<-lmer(X..C~Species + (1|dclass), dat)
+c_lmer
+summary(c_lmer)
+
+n_lmer<-lmer(X.N~Species + (1|dclass), dat)
+summary(n_lmer)
+
+cn_lmer<-lmer(C.N ~ Species + (1|dclass), dat)
+summary(cn_lmer)
+```
+
+
+Plot the results. 
+```{r }
+boxplot(X.N~Species, data=dat)
+boxplot(C.N~Species, data=dat)
+boxplot(X..C~Species, data=dat)
+
+gplot<-ggplot(aes(x=Species, y=C.N), data=dat) + 
+  geom_point() +
+  geom_jitter(width=0.2) +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1), 
+               geom="pointrange", color="red")
+gplot +
+  facet_wrap(~dclass) 
+  
+
+```
+
+```{r }
+gplot2<-ggplot(aes(x=Species, y=X.N), data=dat) + 
+  geom_point() +
+  geom_jitter(width=0.2) +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1), 
+               geom="pointrange", color="red")
+
+gplot2 +
+  facet_wrap(~dclass)
+```
+
+```{r }
+gplot3<-ggplot(aes(x=Species, y=X..C), data=dat) + 
+  geom_point() +
+  geom_jitter(width=0.2) +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1), 
+               geom="pointrange", color="red")
+
+gplot3 +
+  facet_wrap(~dclass) 
+  
+```
+
+```{ r }
+gplot<-ggplot(aes(x=species, y=pct_N), data=dat) + 
+  geom_point() +
+  geom_jitter(width=0.2) +
+  stat_summary(fun.data=mean_se, fun.args=list(mult=1), 
+               geom="pointrange", color="red")
+
+gplot +
+  facet_wrap(~depth)
+```

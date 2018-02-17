@@ -32,6 +32,7 @@ hh_0609 <- readGPX("C:/Users/rbs335/Desktop/Waypoints_HH_Soil/Waypoints_06-Sep-1
 
 #Bind dataframes
 library(dplyr)
+library(plyr)
 hh_all<-rbind(hh_0109$waypoints, hh_0409$waypoints, hh_0509$waypoints, hh_0609$waypoints)
 View(hh_all)
 
@@ -40,7 +41,7 @@ write.csv(hh_all, file = "C:/Users/rbs335/surfdrive/Research/HollandseHout_Proje
 ```
 
 Read in the edited dataframe:
-```{ r }
+```{r }
 #read in datafile
 hh_sites<-read.csv2("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/Site_info/hh_edit.csv", header=TRUE)
 View(hh_sites)
@@ -59,7 +60,7 @@ Plot the sampling points, use the dataframe "hh_edit":
 library(ggplot2)
 library(ggmap)
 
-#write.csv(hh_edit, file = "C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/hh_edit.csv")
+write.csv(hh_edit, file = "C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/hh_edit.csv")
 
 hh_edit<-read.csv("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R/Data/hh_edit.csv", header=TRUE)
 #View(hh_edit)
@@ -68,7 +69,7 @@ hh_edit<-read.csv("C:/Users/rbs335/surfdrive/Research/HollandseHout_Project/HH_R
 #str(hhout)
 
 #ggmap(hhout, extent = "normal")
-#ggmap(hhout, zoom = 10)
+ggmap(hhout, zoom = 10)
 #qmap("Hollandse Hout", zoom = 13)
 library(grDevices)
 coord<-hh_edit[c(2,3)]

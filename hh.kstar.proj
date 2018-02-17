@@ -1,0 +1,48 @@
+---
+title: "K_values"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(dplyr)
+
+```
+
+
+First read in the data set. 
+```{r}
+kstar<-read.csv("C:/Users/rbs335/surfdrive/Research/FieldSite/k_star_6july2017.csv")
+View(kstar)
+```
+
+View shape of data
+```{r }
+h<-hist(kstar$k.star.lme)
+hc<-hist(kstar$k.star.mcmc)
+```
+
+Pull out my species:
+
+out <- subset(test, ID %in% c(201, 202))
+```{r }
+
+sset<- subset(kstar, X %in% c("Fraxinus_excelsior", "Acer_pseudoplatanus", "Quercus_robur", "Populus_nigra", "Picea_abies", "Picea_sitchensis", "Fagus_sylvatica", "Alnus_glutinosa"))
+
+sset
+```
+
+View shape of subset data:
+```{r }
+hsub<-hist(sset$k.star.lme)
+hcsub<-hist(sset$k.star.mcmc)
+
+sset$taxa = sset$X
+
+#order by kstar values
+sset <- sset[order(sset$k.star.lme),] 
+sset
+
+#save dataset as hh.kstar
+hh.kstar<-write.csv("C:/Users/rbs335/surfdrive/Research/hh.kstar.csv")
+```
